@@ -1,0 +1,20 @@
+# C extensions
+*.so
+*.pyc
+*.pth
+*.tar
+*.pt
+*.csv
+
+**/__pycache__
+
+/checkpoint
+/datasets/hmdb51_frames
+
+/runs
+
+/weights
+
+
+
+
