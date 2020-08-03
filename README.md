@@ -35,6 +35,7 @@ There are two seperate training files called two_stream2.py and two_stream_bert2
 
 #### Models
 For the models listed below, use two_stream2.py
+
 rgb_resneXt3D64f101
 flow_resneXt3D64f101
 rgb_slowfast64f_50
