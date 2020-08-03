@@ -44,29 +44,29 @@ For the models listed below, use two_stream2.py
 - **rgb_r2plus1d_32f_34**
 
 For the models listed below, use two_stream_bert2.py
-rgb_resneXt3D64f101_bert10_FRAB
-flow_resneXt3D64f101_bert10_FRAB
-rgb_resneXt3D64f101_bert10_FRMB
-flow_resneXt3D64f101_bert10_FRMB
-rgb_resneXt3D64f101_FRMB_adamw
-rgb_resneXt3D64f101_adamw
-rgb_resneXt3D64f101_FRMB_NLB_concatenation
-rgb_resneXt3D64f101_FRMB_lstm
-rgb_resneXt3D64f101_concatenation
+- **rgb_resneXt3D64f101_bert10_FRAB**
+- **flow_resneXt3D64f101_bert10_FRAB**
+- **rgb_resneXt3D64f101_bert10_FRMB**
+- **flow_resneXt3D64f101_bert10_FRMB**
+- **rgb_resneXt3D64f101_FRMB_adamw**
+- **rgb_resneXt3D64f101_adamw**
+- **rgb_resneXt3D64f101_FRMB_NLB_concatenation**
+- **rgb_resneXt3D64f101_FRMB_lstm**
+- **rgb_resneXt3D64f101_concatenation**
 
-rgb_slowfast64f_50_bert10_FRAB_late
-rgb_slowfast64f_50_bert10_FRAB_early
-rgb_slowfast64f_50_bert10_FRMB_early
-rgb_slowfast64f_50_bert10_FRMB_late
+- **rgb_slowfast64f_50_bert10_FRAB_late**
+- **rgb_slowfast64f_50_bert10_FRAB_early**
+- **rgb_slowfast64f_50_bert10_FRMB_early**
+- **rgb_slowfast64f_50_bert10_FRMB_late**
 
-rgb_I3D64f_bert2
-flow_I3D64f_bert2
-rgb_I3D64f_bert2_FRMB
-flow_I3D64f_bert2_FRMB
-rgb_I3D64f_bert2_FRAB
-flow_I3D64f_bert2_FRAB
+- **rgb_I3D64f_bert2**
+- **flow_I3D64f_bert2**
+- **rgb_I3D64f_bert2_FRMB**
+- **flow_I3D64f_bert2_FRMB**
+- **rgb_I3D64f_bert2_FRAB**
+- **flow_I3D64f_bert2_FRAB**
 
-rgb_r2plus1d_32f_34_bert10
+- **rgb_r2plus1d_32f_34_bert10**
 
 #### Training Commands
 
@@ -82,7 +82,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 To continue the training from the best model, add -c. 
 To evaluate the single clip single crop performance of best model, add -e
 
-##Test of the dataset
+## Test of the dataset
 For the test of the files, there are three seperate files, namely 
 spatial_demo3D.py  -- which is for multiple clips test
 spatial_demo_bert.py  -- which is for single clip test
@@ -101,7 +101,7 @@ python combined_demo.py --arch_rgb=rgb_resneXt3D64f101_bert10_FRMB  --arch_flow=
 If your training is implemented with multi-GPU, manually set multiGPUTrain to True
 As default, the tests are implemented ten crops. For single crops test, manually set ten_crop_enabled to False
 
-##Related Projects
+## Related Projects
 [Toward Good Practices](https://github.com/bryanyzhu/two-stream-pytorch): PyTorch implementation of popular two-stream frameworks for video action recognition
 
 [ResNeXt101](https://github.com/kenshohara/video-classification-3d-cnn-pytorch): Video Classification Using 3D ResNet
