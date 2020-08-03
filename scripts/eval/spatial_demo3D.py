@@ -36,7 +36,7 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
+    if not name.startswith("__")
     and callable(models.__dict__[name]))
 
 dataset_names = sorted(name for name in datasets.__all__)
@@ -46,17 +46,15 @@ parser = argparse.ArgumentParser(description='PyTorch Two-Stream Action Recognit
 parser.add_argument('--dataset', '-d', default='hmdb51',
                     choices=["ucf101", "hmdb51", "window"],
                     help='dataset: ucf101 | hmdb51')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101_bert10_FRAB',
+parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101_bert10_FRMB',
                     choices=model_names)
 
-parser.add_argument('-s', '--split', default=2, type=int, metavar='S',
+parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
 
 parser.add_argument('-w', '--window', default=14, type=int, metavar='V',
                     help='validation file index (default: 3)')
 
-parser.add_argument('-t', '--tsn', dest='tsn', action='store_true',
-                    help='TSN Mode')
 
 parser.add_argument('-v', '--val', dest='window_val', action='store_true',
                     help='Window Validation Selection')
@@ -64,7 +62,7 @@ parser.add_argument('-v', '--val', dest='window_val', action='store_true',
 
 multiGPUTest = False
 multiGPUTrain = False
-ten_crop_enabled = False
+ten_crop_enabled = True
 num_seg=16
 num_seg_3D=1
 
@@ -76,12 +74,8 @@ def buildModel(model_path,num_categories):
         model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg)
     else:
         model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg_3D)
-    if args.tsn:
-        new_dict = {k[7:]: v for k, v in params['state_dict'].items()} 
-        model_dict=model.state_dict() 
-        model_dict.update(new_dict)
-        model.load_state_dict(model_dict)
-    elif multiGPUTest:
+
+    if multiGPUTest:
         model=torch.nn.DataParallel(model)
         new_dict={"module."+k: v for k, v in params['state_dict'].items()} 
         model.load_state_dict(new_dict)
@@ -101,10 +95,8 @@ def buildModel(model_path,num_categories):
 def main():
     global args
     args = parser.parse_args()
-    if args.tsn:    
-        modelLocation="./checkpoint/"+args.dataset+"_tsn_"+args.arch+"_split"+str(args.split)
-    else:
-        modelLocation="./checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
+
+    modelLocation="./checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
 
     model_path = os.path.join('../../',modelLocation,'model_best.pth.tar') 
     

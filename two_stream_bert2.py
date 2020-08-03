@@ -51,41 +51,38 @@ parser.add_argument('--dataset', '-d', default='hmdb51',
                     choices=["ucf101", "hmdb51", "smtV2", "window"],
                     help='dataset: ucf101 | hmdb51 | smtV2')
 
-parser.add_argument('--arch', '-a', default='rgb_resneXt3D64f101_NLB',
+parser.add_argument('--arch', '-a', default='rgb_resneXt3D64f101_bert10_FRMB',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: rgb_vgg16)')
+                        ' (default: rgb_resneXt3D64f101_bert10_FRMB)')
 
-parser.add_argument('-s', '--split', default=3, type=int, metavar='S',
+parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+                    help='number of data loading workers (default: 2)')
 parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch-size', default=9, type=int,
-                    metavar='N', help='mini-batch size (default: 50)')
-parser.add_argument('--iter-size', default=14, type=int,
-                    metavar='I', help='iter size as in Caffe to reduce memory usage (default: 5)')
+parser.add_argument('-b', '--batch-size', default=8, type=int,
+                    metavar='N', help='mini-batch size (default: 8)')
+parser.add_argument('--iter-size', default=16, type=int,
+                    metavar='I', help='iter size to reduce memory usage (default: 16)')
 parser.add_argument('--lr', '--learning-rate', default=1e-5, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('--lr_steps', default=[10], type=float, nargs="+",
-                    metavar='LRSteps', help='epochs to decay learning rate by 10')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum')
+                    help='momentum (default: 0.9)')
 parser.add_argument('--weight-decay', '--wd', default=1e-3, type=float,
-                    metavar='W', help='weight decay (default: 5e-4)')
+                    metavar='W', help='weight decay (default: 1e-3)')
 parser.add_argument('--print-freq', default=400, type=int,
-                    metavar='N', help='print frequency (default: 50)')
+                    metavar='N', help='print frequency (default: 400)')
 parser.add_argument('--save-freq', default=1, type=int,
-                    metavar='N', help='save frequency (default: 25)')
+                    metavar='N', help='save frequency (default: 1)')
 parser.add_argument('--num-seg', default=1, type=int,
-                    metavar='N', help='Number of segments for temporal LSTM (default: 16)')
+                    metavar='N', help='Number of segments in dataloader (default: 1)')
 #parser.add_argument('--resume', default='./dene4', type=str, metavar='PATH',
 #                    help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-
 parser.add_argument('-c', '--continue', dest='contine', action='store_true',
                     help='evaluate model on validation set')
 
@@ -98,13 +95,10 @@ smt_pretrained = False
 HALF = False
 training_continue = False
 
-
-
-
 def main():
     global args, best_prec1,model,writer,best_loss, length, width, height, input_size, scheduler
     args = parser.parse_args()
-    
+    training_continue = args.contine
     if '3D' in args.arch:
         if 'I3D' in args.arch or 'MFNET3D' in args.arch:
             if '112' in args.arch:
@@ -137,32 +131,19 @@ def main():
     if args.evaluate:
         print("Building validation model ... ")
         model = build_model_validate()
+        optimizer = AdamW(model.parameters(), lr= args.lr, weight_decay=args.weight_decay)
     elif training_continue:
         model, startEpoch, optimizer, best_prec1 = build_model_continue()
-        args.start_epoch = startEpoch
-        lr = args.lr
         for param_group in optimizer.param_groups:
-            #lr = param_group['lr']
-            param_group['lr'] = lr
+            lr = param_group['lr']
+            #param_group['lr'] = lr
         print("Continuing with best precision: %.3f and start epoch %d and lr: %f" %(best_prec1,startEpoch,lr))
     else:
-        print("Building model ... ")
+        print("Building model with ADAMW... ")
         model = build_model()
-        if smt_pretrained:
-            smtV2_pretrained_weights = './weights/smtV2_' + args.arch + '.pth'
-            weights = torch.load(smtV2_pretrained_weights)         
-            weights['fc_action.weight'] = model.state_dict()['fc_action.weight']
-            weights['fc_action.bias'] = model.state_dict()['fc_action.bias']
-            model.load_state_dict(weights)
-            print('smtV2 pretrained is loaded')
-        #optimizer = torch.optim.Adam(model.parameters(), args.lr)
         optimizer = AdamW(model.parameters(), lr= args.lr, weight_decay=args.weight_decay)
-        # optimizer = torch.optim.SGD(model.parameters(), args.lr,
-        #                             momentum=args.momentum,
-        #                             weight_decay=args.weight_decay)
-        #optimizer = swats.SWATS(model.parameters(), args.lr)
-        #model = build_model_validate()
         startEpoch = 0
+
     
     if HALF:
         model.half()  # convert to half precision
@@ -176,19 +157,10 @@ def main():
     criterion = nn.CrossEntropyLoss().cuda()
     criterion2 = nn.MSELoss().cuda()
     
-
-
-    
-    #optimizer = torch.optim.Adam(model.parameters(), args.lr)
     
     scheduler = lr_scheduler.ReduceLROnPlateau(
         optimizer, 'min', patience=5, verbose=True)
     
-    #scheduler = lr_scheduler.CyclicLR(optimizer, base_lr = args.lr * 0.001, max_lr = args.lr, cycle_momentum=False)
-    # if args.contine:
-    #     scheduler.step(best_prec1)
-    #     print('scheduler step with best prec %f' %(best_prec1))
-    #optimizer = swats.SWATS(model.parameters(), args.lr)
 
     print("Saving everything to directory %s." % (saveLocation))
     if args.dataset=='ucf101':
@@ -439,18 +411,13 @@ def build_model_validate():
     params = torch.load(model_path)
     print(modelLocation)
     if args.dataset=='ucf101':
-        print('model path is: %s' %(model_path))
-        model = models.__dict__[args.arch](modelPath=model_path, num_classes=101,length=args.num_seg)
+        model=models.__dict__[args.arch](modelPath='', num_classes=101,length=args.num_seg)
     elif args.dataset=='hmdb51':
-        print('model path is: %s' %(model_path))
-        model = models.__dict__[args.arch](modelPath=model_path, num_classes=51, length=args.num_seg)
-    elif args.dataset=='smtV2':
-        print('model path is: %s' %(model_path))
-        model = models.__dict__[args.arch](modelPath=model_path, num_classes=174, length=args.num_seg)
-    elif args.dataset=='window':
-        print('model path is: %s' %(model_path))
-        model = models.__dict__[args.arch](modelPath=model_path, num_classes=3, length=args.num_seg)
+        model=models.__dict__[args.arch](modelPath='', num_classes=51,length=args.num_seg)
    
+    if torch.cuda.device_count() > 1:
+        model=torch.nn.DataParallel(model) 
+
     model.load_state_dict(params['state_dict'])
     model.cuda()
     model.eval() 

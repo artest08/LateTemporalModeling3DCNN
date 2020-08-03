@@ -16,7 +16,7 @@ import numpy as np
 
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 import torch
 import torch.nn as nn
@@ -46,19 +46,19 @@ dataset_names = sorted(name for name in datasets.__all__)
 parser = argparse.ArgumentParser(description='PyTorch Two-Stream2')
 parser.add_argument('--settings', metavar='DIR', default='./datasets/settings',
                     help='path to dataset setting files')
-parser.add_argument('--dataset', '-d', default='window',
+parser.add_argument('--dataset', '-d', default='hmdb51',
                     choices=["ucf101", "hmdb51", "smtV2"],
                     help='dataset: ucf101 | hmdb51')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='pose_I3D64f',
+parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: rgb_vgg16)')
-parser.add_argument('-s', '--split', default=2, type=int, metavar='S',
+                        ' (default: rgb_resneXt3D64f101)')
+parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
 parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=300, type=int, metavar='N',
+parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
@@ -80,25 +80,23 @@ parser.add_argument('--num-seg', default=1, type=int,
                     metavar='N', help='Number of segments for temporal LSTM (default: 16)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-
+parser.add_argument('-c', '--continue', dest='contine', action='store_true',
+                    help='evaluate model on validation set')
 
 
 best_prec1 = 0
 best_loss = 30
-warmUpEpoch=5
-learning_rate_index = 0
-max_learning_rate_decay_count = 3
-best_in_existing_learning_rate = 0
+
 HALF = False
 
-select_according_to_best_classsification_lost = True #Otherwise select according to top1 default: False
+select_according_to_best_classsification_lost = False #Otherwise select according to top1 default: False
 
 training_continue = False
 def main():
-    global args, best_prec1,model,writer,best_loss, length, width, height
-    global max_learning_rate_decay_count, best_in_existing_learning_rate, learning_rate_index, input_size
+    global args, best_prec1,model,writer,best_loss, length, width, height, input_size
+ 
     args = parser.parse_args()
-    
+    training_continue = args.contine
     if '3D' in args.arch:
         if 'I3D' in args.arch or 'MFNET3D' in args.arch:
             if '112' in args.arch:
@@ -131,10 +129,25 @@ def main():
     if args.evaluate:
         print("Building validation model ... ")
         model = build_model_validate()
+        #This line is not important, only dummy
+        optimizer = AdamW(model.parameters(), lr= args.lr, weight_decay=args.weight_decay)
+    elif training_continue:
+        model, start_epoch, optimizer, best_prec1 = build_model_continue()
+        #lr = args.lr
+        for param_group in optimizer.param_groups:
+            lr = param_group['lr']
+            #param_group['lr'] = lr
+        print("Continuing with best precision: %.3f and start epoch %d and lr: %f" %(best_prec1,start_epoch,lr))
     else:
-        print("Building model ... ")
+        print("Building model with SGD optimizer... ")
         model = build_model()
-        #model = build_model_validate()
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=args.lr,
+            momentum=args.momentum,
+            dampening=0.9,
+            weight_decay=args.weight_decay)
+        start_epoch = 0
     
     if HALF:
         model.half()  # convert to half precision
@@ -147,40 +160,9 @@ def main():
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
     
-    
-    if 'rep_flow' in args.arch:
-        flow_layer_param_list = []
-        param_list = []
-        for name, param in model.named_parameters():
-            if 'features.7' in name:
-                print(name)
-                flow_layer_param_list.append(param)
-            else:
-                param_list.append(param)
-                
-        optimizer = torch.optim.SGD(
-            [{'params': param_list},
-            {'params': flow_layer_param_list, 'lr': args.lr * 0.01}],
-            lr=args.lr,
-            momentum=args.momentum,
-            dampening=0.9,
-            weight_decay=args.weight_decay)
-    else:
-        optimizer = torch.optim.SGD(
-            model.parameters(),
-            lr=args.lr,
-            momentum=args.momentum,
-            dampening=0.9,
-            weight_decay=args.weight_decay)
+
         
-    if training_continue:
-        model, startEpoch, optimizer, best_prec1 = build_model_continue()
-        args.start_epoch = startEpoch
-        lr = args.lr
-        for param_group in optimizer.param_groups:
-            #lr = param_group['lr']
-            param_group['lr'] = lr
-        print("Continuing with best precision: %.3f and start epoch %d and lr: %f" %(best_prec1,startEpoch,lr))
+
         
     # optimizer = AdamW(model.parameters(),
     #                   lr=args.lr,
@@ -347,13 +329,11 @@ def main():
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
-        prec1,prec3=validate(val_loader, model, criterion)
+        prec1,prec3,lossClassification = validate(val_loader, model, criterion,modality)
         return
 
-    for epoch in range(args.start_epoch, args.epochs):
-#        if learning_rate_index > max_learning_rate_decay_count:
-#            break
-#        adjust_learning_rate4(optimizer, learning_rate_index)
+    for epoch in range(start_epoch, args.epochs):
+
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch,modality)
 
@@ -374,13 +354,6 @@ def main():
         else:
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
-        
-        #best_in_existing_learning_rate = max(prec1, best_in_existing_learning_rate)
-        
-#        if best_in_existing_learning_rate > prec1:
-#            learning_rate_index = learning_rate_index +1
-#            best_in_existing_learning_rate = 0
-            
         
 
 
@@ -454,8 +427,12 @@ def build_model_validate():
     elif args.dataset=='hmdb51':
         model=models.__dict__[args.arch](modelPath='', num_classes=51,length=args.num_seg)
    
+    if torch.cuda.device_count() > 1:
+        model=torch.nn.DataParallel(model) 
+
     model.load_state_dict(params['state_dict'])
-    model = model.cuda()
+    model.cuda()
+    model.eval() 
     return model
 
 def build_model_continue():
@@ -656,51 +633,7 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def adjust_learning_rate(optimizer, epoch):
-    """Sets the learning rate to the initial LR decayed by 10 every 150 epochs"""
 
-    decay = 0.1 ** (sum(epoch >= np.array(args.lr_steps)))
-    lr = args.lr * decay
-    print("Current learning rate is %4.6f:" % lr)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
-                
-def adjust_learning_rate2(optimizer, epoch):
-    isWarmUp=epoch < warmUpEpoch
-    decayRate=0.2
-    if isWarmUp:
-        lr=args.lr*(epoch+1)/warmUpEpoch
-    else:
-        lr=args.lr*(1/(1+(epoch+1-warmUpEpoch)*decayRate))
-    
-    #decay = 0.1 ** (sum(epoch >= np.array(args.lr_steps)))
-    print("Current learning rate is %4.6f:" % lr)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
-def adjust_learning_rate3(optimizer, epoch):
-    isWarmUp=epoch < warmUpEpoch
-    decayRate=0.97
-    if isWarmUp:
-        lr=args.lr*(epoch+1)/warmUpEpoch
-    else:
-        lr = args.lr * decayRate**(epoch+1-warmUpEpoch)
-    
-    #decay = 0.1 ** (sum(epoch >= np.array(args.lr_steps)))
-    print("Current learning rate is %4.6f:" % lr)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
-def adjust_learning_rate4(optimizer, learning_rate_index):
-    """Sets the learning rate to the initial LR decayed by 10 every 150 epochs"""
-
-    decay = 0.1 ** learning_rate_index
-    lr = args.lr * decay
-    print("Current learning rate is %4.8f:" % lr)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-        
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""

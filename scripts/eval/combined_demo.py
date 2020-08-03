@@ -47,20 +47,15 @@ parser = argparse.ArgumentParser(description='PyTorch Two-Stream Action Recognit
 parser.add_argument('--dataset', '-d', default='hmdb51',
                     choices=["ucf101", "hmdb51"],
                     help='dataset: ucf101 | hmdb51')
-parser.add_argument('--arch_flow', '-a', metavar='ARCH', default='flow_I3D64f_bert2B',
+parser.add_argument('--arch_flow', '-a', metavar='ARCH', default='flow_resneXt3D64f101_bert10_FRMB',
                     choices=model_names)
-parser.add_argument('--arch_rgb', '-b', metavar='ARCH', default='rgb_I3D64f_bert2B',
-                    choices=model_names)
-parser.add_argument('--arch_pose', '-c', metavar='ARCH', default='pose_resnet18_bert10',
+parser.add_argument('--arch_rgb', '-b', metavar='ARCH', default='rgb_resneXt3D64f101_bert10_FRMB',
                     choices=model_names)
 parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
 
 parser.add_argument('-w', '--window', default=3, type=int, metavar='V',
                     help='validation file index (default: 3)')
-
-parser.add_argument('-t', '--tsn', dest='tsn', action='store_true',
-                    help='TSN Mode')
 
 parser.add_argument('-v', '--val', dest='window_val', action='store_true',
                     help='Window Validation Selection')
@@ -85,17 +80,9 @@ def buildModel(model_path,arch,num_categories):
         model=models.__dict__[arch](modelPath='', num_classes=num_categories,length=num_seg_rgb)
     elif 'flow' in arch:
         model=models.__dict__[arch](modelPath='', num_classes=num_categories,length=num_seg_flow)
-    elif 'pose' in arch:
-        multiGPUTrain = True
-        model=models.__dict__[arch](modelPath='', num_classes=num_categories,length=num_seg_pose)
     params = torch.load(model_path)
         
-    if args.tsn:
-        new_dict = {k[7:]: v for k, v in params['state_dict'].items()} 
-        model_dict=model.state_dict() 
-        model_dict.update(new_dict)
-        model.load_state_dict(model_dict)
-    elif multiGPUTest:
+    if multiGPUTest:
         model=torch.nn.DataParallel(model)
         new_dict={"module."+k: v for k, v in params['state_dict'].items()} 
         model.load_state_dict(new_dict)
@@ -114,17 +101,12 @@ def main():
     global args
     args = parser.parse_args()
     
-    if args.tsn:    
-        modelLocationRGB="./checkpoint/"+args.dataset+"_tsn_"+args.arch_rgb+"_split"+str(args.split)
-        modelLocationFlow="./checkpoint/"+args.dataset+"_tsn_"+args.arch_flow+"_split"+str(args.split)
-    else:
-        modelLocationRGB="./checkpoint/"+args.dataset+"_"+args.arch_rgb+"_split"+str(args.split)
-        modelLocationFlow="./checkpoint/"+args.dataset+"_"+args.arch_flow+"_split"+str(args.split)
-        modelLocationPose="./checkpoint/"+args.dataset+"_"+args.arch_pose+"_split"+str(args.split)
+
+    modelLocationRGB="./checkpoint/"+args.dataset+"_"+args.arch_rgb+"_split"+str(args.split)
+    modelLocationFlow="./checkpoint/"+args.dataset+"_"+args.arch_flow+"_split"+str(args.split)
 
     model_path_rgb = os.path.join('../../',modelLocationRGB,'model_best.pth.tar') 
     model_path_flow = os.path.join('../../',modelLocationFlow,'model_best.pth.tar') 
-    model_path_pose = os.path.join('../../',modelLocationPose,'model_best.pth.tar') 
     
     if args.dataset=='ucf101':
         frameFolderName = "ucf101_frames"
@@ -158,7 +140,6 @@ def main():
         val_fileName = "val_flow_split%d.txt" %(args.split)
         
     rgb_extension = 'img_{0:05d}.jpg'
-    pose_extension = 'pose1_{0:05d}.jpg'
     if 'ucf101' in args.dataset or 'window' in args.dataset:
         flow_extension = 'flow_{0}_{1:05d}.jpg'
     elif 'hmdb51' in args.dataset:

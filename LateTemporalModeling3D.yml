@@ -1,4 +1,4 @@
-name: slowfast
+name: LateTemporalModeling3D
 channels:
   - defaults
 dependencies:

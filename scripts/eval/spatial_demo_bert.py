@@ -7,31 +7,23 @@ Created on Thu Jul 25 13:52:03 2019
 """
 
 import os, sys
-import collections
 import numpy as np
-import cv2
-import math
-import random
+
 import time
 import argparse
 
 from ptflops import get_model_complexity_info
 
 import torch
-import torch.nn as nn
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-import csv
 from sklearn.metrics import confusion_matrix
 
 datasetFolder="../../datasets"
 sys.path.insert(0, "../../")
 import models
-from VideoSpatialPrediction_bert import VideoSpatialPrediction_bert
 from VideoSpatialPrediction3D_bert import VideoSpatialPrediction3D_bert
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
@@ -48,17 +40,15 @@ parser = argparse.ArgumentParser(description='PyTorch Two-Stream Action Recognit
 parser.add_argument('--dataset', '-d', default='hmdb51',
                     choices=["ucf101", "hmdb51"],
                     help='dataset: ucf101 | hmdb51')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101_pooling3',
+parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101_bert10_FRMB',
                     choices=model_names)
 
-parser.add_argument('-s', '--split', default=3, type=int, metavar='S',
+parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
 
 parser.add_argument('-w', '--window', default=3, type=int, metavar='V',
                     help='validation file index (default: 3)')
 
-parser.add_argument('-t', '--tsn', dest='tsn', action='store_true',
-                    help='TSN Mode')
 
 parser.add_argument('-v', '--val', dest='window_val', action='store_true',
                     help='Window Validation Selection')
@@ -72,21 +62,10 @@ num_seg_3D=1
 result_dict = {}
 
 def buildModel(model_path,num_categories):
-    if '3D' in args.arch:
-        model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg_3D)
-    elif 'tsm' in args.arch:
-        model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg_3D)
-    else:
-        model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg)
-
-    
+    model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg_3D)
     params = torch.load(model_path)
-    if args.tsn:
-        new_dict = {k[7:]: v for k, v in params['state_dict'].items()} 
-        model_dict=model.state_dict() 
-        model_dict.update(new_dict)
-        model.load_state_dict(model_dict)
-    elif multiGPUTest:
+
+    if multiGPUTest:
         model=torch.nn.DataParallel(model)
         new_dict={"module."+k: v for k, v in params['state_dict'].items()} 
         model.load_state_dict(new_dict)
@@ -115,10 +94,8 @@ def main():
     else:
         length=16
         
-    if args.tsn:    
-        modelLocation="./checkpoint/"+args.dataset+"_tsn_"+args.arch+"_split"+str(args.split)
-    else:
-        modelLocation="./checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
+
+    modelLocation="./checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
 
     model_path = os.path.join('../../',modelLocation,'model_best.pth.tar') 
     
@@ -139,8 +116,6 @@ def main():
             val_fileName = "window%d.txt" %(args.window)
         else:
             val_fileName = "val_rgb_split%d.txt" %(args.split)
-    elif 'pose' in args.arch:
-        extension = 'pose1_{0:05d}.jpg'
     elif 'flow' in args.arch:
         val_fileName = "val_flow_split%d.txt" %(args.split)
         if 'ucf101' in args.dataset or 'window' in args.dataset:
@@ -167,10 +142,10 @@ def main():
     model_time = model_end_time - model_start_time
     print("Action recognition model is loaded in %4.4f seconds." % (model_time))
     
-    flops, params = get_model_complexity_info(spatial_net, (3,length, 112, 112), as_strings=True, print_per_layer_stat=False)
-    #flops, params = get_model_complexity_info(spatial_net, (3, 224, 224), as_strings=True, print_per_layer_stat=False)
-    print('{:<30}  {:<8}'.format('Computational complexity: ', flops))
-    print('{:<30}  {:<8}'.format('Number of parameters: ', params))
+    # flops, params = get_model_complexity_info(spatial_net, (3,length, 112, 112), as_strings=True, print_per_layer_stat=False)
+    # #flops, params = get_model_complexity_info(spatial_net, (3, 224, 224), as_strings=True, print_per_layer_stat=False)
+    # print('{:<30}  {:<8}'.format('Computational complexity: ', flops))
+    # print('{:<30}  {:<8}'.format('Number of parameters: ', params))
     
     f_val = open(val_file, "r")
     val_list = f_val.readlines()
