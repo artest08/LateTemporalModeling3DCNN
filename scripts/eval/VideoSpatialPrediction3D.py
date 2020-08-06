@@ -281,10 +281,7 @@ def VideoSpatialPrediction3D(
             input_data_batched = input_data[span,:,:,:,:]
             imgDataTensor = torch.from_numpy(input_data_batched).type(torch.FloatTensor).cuda()
             if 'rgb' in architecture_name or 'pose' in architecture_name:
-                if 'tsm' in architecture_name or not "3D" in architecture_name:
-                    imgDataTensor = imgDataTensor.view(-1,length,3,imageSize,imageSize)
-                else:
-                    imgDataTensor = imgDataTensor.view(-1,length,3,imageSize,imageSize).transpose(1,2)
+                imgDataTensor = imgDataTensor.view(-1,length,3,imageSize,imageSize).transpose(1,2)
             elif 'flow' in architecture_name:
                 imgDataTensor = imgDataTensor.view(-1,length,2,imageSize,imageSize).transpose(1,2)
                     
