@@ -218,9 +218,9 @@ def main():
         print("window%d.txt" %(args.window))
         
     
-    resultDict={'y_true':y_true,'y_pred':y_pred}
+    #resultDict={'y_true':y_true,'y_pred':y_pred}
     
-    np.save('results/%s.npy' %(args.dataset+args.arch+"_split"+str(args.split)), resultDict) 
+    #np.save('results/%s.npy' %(args.dataset+args.arch+"_split"+str(args.split)), resultDict) 
 
 if __name__ == "__main__":
     main()

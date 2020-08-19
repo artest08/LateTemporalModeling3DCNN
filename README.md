@@ -67,6 +67,7 @@ For the models listed below, use two_stream_bert2.py
 - **flow_I3D64f_bert2_FRAB**
 
 - **rgb_r2plus1d_32f_34_bert10**
+- **rgb_r2plus1d_64f_34_bert10**
 
 #### Training Commands
 
