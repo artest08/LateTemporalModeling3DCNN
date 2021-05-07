@@ -136,8 +136,6 @@ dependencies:
   - sphinxcontrib-qthelp=1.0.2=py_0
   - sphinxcontrib-serializinghtml=1.1.3=py_0
   - sphinxcontrib-websupport=1.1.0=py36_1
-  - spyder=4.0.0=py36_0
-  - spyder-kernels=1.8.1=py36_0
   - sqlite=3.30.1=h7b6447c_0
   - testpath=0.4.4=py_0
   - tk=8.6.8=hbc83047_0
@@ -171,7 +169,7 @@ dependencies:
     - freetype-py==2.1.0.post1
     - fuel==0.2.0
     - future==0.17.1
-    - fvcore==0.1
+    - fvcore==0.1.dev200506
     - gast==0.2.0
     - google-auth==1.9.0
     - google-auth-oauthlib==0.4.1
@@ -194,7 +192,6 @@ dependencies:
     - numexpr==2.6.9
     - numpy==1.15.0
     - oauthlib==3.1.0
-    - object-detection==0.1
     - opencv-contrib-python==4.1.2.30
     - pandas==0.24.1
     - parso==0.5.1
@@ -211,12 +208,9 @@ dependencies:
     - pyinstaller==3.4
     - pyqt5==5.12.3
     - pyqt5-sip==12.7.0
-    - python-fontconfig==0.5.1
     - python-utils==2.3.0
     - pytorch-swats==0.1.0
-    - pyyaml==3.13
     - requests-oauthlib==1.3.0
-    - roi-align==0.0.2
     - rsa==4.0
     - scikit-image==0.14.2
     - scipy==1.1.0
@@ -237,4 +231,3 @@ dependencies:
     - yacs==0.1.7
     - youtube-dl==2019.11.5
 prefix: /home/esat/anaconda3/envs/slowfast
-
