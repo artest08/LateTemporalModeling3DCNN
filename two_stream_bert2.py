@@ -30,7 +30,7 @@ import models
 import datasets
 import swats
 from opt.AdamW import AdamW
-from weights.model_path import rgb_3d_model_path_selection
+from utils.model_path import rgb_3d_model_path_selection
 
 
 model_names = sorted(name for name in models.__dict__
