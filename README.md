@@ -1,6 +1,6 @@
 # LateTemporalModeling3DCNN
 
-Pytorch implementation of [Late Temporal Modeling in 3D CNN Architectures with BERT for Action Recognition]
+Official Pytorch implementation of [Late Temporal Modeling in 3D CNN Architectures with BERT for Action Recognition](https://arxiv.org/pdf/2008.01232.pdf).
 
 This the repository which implements late temporal modeling on top of the 3D CNN architectures and mainly focus on BERT for this aim. 
 
@@ -101,6 +101,21 @@ python combined_demo.py --arch_rgb=rgb_resneXt3D64f101_bert10_FRMB  --arch_flow=
 
 If your training is implemented with multi-GPU, manually set multiGPUTrain to True
 As default, the tests are implemented ten crops. For single crops test, manually set ten_crop_enabled to False
+
+## Citation
+
+If you use this toolbox or benchmark in your research, please cite this work:
+```
+@inproceedings{kalfaoglu2020late,
+  title={Late temporal modeling in 3d cnn architectures with bert for action recognition},
+  author={Kalfaoglu, M Esat and Kalkan, Sinan and Alatan, A Aydin},
+  booktitle={European Conference on Computer Vision},
+  pages={731--747},
+  year={2020},
+  organization={Springer}
+}
+```
+
 
 ## Related Projects
 [Toward Good Practices](https://github.com/bryanyzhu/two-stream-pytorch): PyTorch implementation of popular two-stream frameworks for video action recognition
