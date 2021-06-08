@@ -31,7 +31,7 @@ from torch.optim import lr_scheduler
 import video_transforms
 import models
 import datasets
-import swats
+#import swats
 
 from opt.AdamW import AdamW
 from utils.model_path import rgb_3d_model_path_selection
@@ -82,6 +82,8 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('-c', '--continue', dest='contine', action='store_true',
                     help='evaluate model on validation set')
+parser.add_argument('-t', '--test', dest='test', action='store_true',
+                    help='TEST trial')
 
 
 best_prec1 = 0
@@ -125,7 +127,9 @@ def main():
     writer = SummaryWriter(saveLocation)
    
     # create model
-
+    if args.test:
+        args.workers = 0
+        args.iter_size = 1
     if args.evaluate:
         print("Building validation model ... ")
         model = build_model_validate()
@@ -179,7 +183,10 @@ def main():
     if args.dataset=='ucf101':
         dataset='./datasets/ucf101_frames'
     elif args.dataset=='hmdb51':
-        dataset='./datasets/hmdb51_frames'
+        if args.test:
+            dataset = "./datasets/hmdb51_test_frames"
+        else:
+            dataset='./datasets/hmdb51_frames'
     elif args.dataset=='window':
         dataset='./datasets/window_frames'
     else:
@@ -287,9 +294,17 @@ def main():
 
     # data loading
     train_setting_file = "train_%s_split%d.txt" % (modality, args.split)
-    train_split_file = os.path.join(args.settings, args.dataset, train_setting_file)
+    if args.test:
+        train_split_file = os.path.join(args.settings, args.dataset + '_test', train_setting_file)
+    else:
+        train_split_file = os.path.join(args.settings, args.dataset, train_setting_file)
+
     val_setting_file = "val_%s_split%d.txt" % (modality, args.split)
-    val_split_file = os.path.join(args.settings, args.dataset, val_setting_file)
+    if args.test:
+        val_split_file = os.path.join(args.settings, args.dataset + '_test', val_setting_file)
+    else:
+        val_split_file = os.path.join(args.settings, args.dataset, val_setting_file)
+
     if not os.path.exists(train_split_file) or not os.path.exists(val_split_file):
         print("No split file exists in %s directory. Preprocess the dataset first" % (args.settings))
 
@@ -527,7 +542,7 @@ def train(train_loader, model, criterion, optimizer, epoch,modality):
             acc_mini_batch_top3 = 0.0
             totalSamplePerIter = 0.0
         if (i+1) % args.print_freq == 0:
-            print('[%d] time: %.3f loss: %.4f' %(i,batch_time.avg,lossesClassification.avg))
+            print('[%d] time: %.3f loss: %.4f' %(i, batch_time.avg, lossesClassification.avg))
 #        if (i+1) % args.print_freq == 0:
 #
 #            print('Epoch: [{0}][{1}/{2}]\t'

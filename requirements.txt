@@ -10,5 +10,7 @@ conda install -c conda-forge fvcore
 pip install iopath
 pip install simplejson
 pip install opencv-python
+pip install tensorboardX
+
 
 
