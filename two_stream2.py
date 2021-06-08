@@ -369,12 +369,10 @@ def main():
         else:
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
-        
-
 
         if (epoch + 1) % args.save_freq == 0:
             checkpoint_name = "%03d_%s" % (epoch + 1, "checkpoint.pth.tar")
-            if is_best:
+            if is_best and not args.test:
                 print("Model son iyi olarak kaydedildi")
                 save_checkpoint({
                     'epoch': epoch + 1,
@@ -384,16 +382,17 @@ def main():
                     'best_loss': best_loss,
                     'optimizer' : optimizer.state_dict(),
                 }, is_best, checkpoint_name, saveLocation)
-    
-    checkpoint_name = "%03d_%s" % (epoch + 1, "checkpoint.pth.tar")
-    save_checkpoint({
-        'epoch': epoch + 1,
-        'arch': args.arch,
-        'state_dict': model.state_dict(),
-        'best_prec1': best_prec1,
-        'best_loss': best_loss,
-        'optimizer' : optimizer.state_dict(),
-    }, is_best, checkpoint_name, saveLocation)
+
+    if not args.test:
+        checkpoint_name = "%03d_%s" % (epoch + 1, "checkpoint.pth.tar")
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': args.arch,
+            'state_dict': model.state_dict(),
+            'best_prec1': best_prec1,
+            'best_loss': best_loss,
+            'optimizer' : optimizer.state_dict(),
+        }, is_best, checkpoint_name, saveLocation)
     writer.export_scalars_to_json("./all_scalars.json")
     writer.close()
 
