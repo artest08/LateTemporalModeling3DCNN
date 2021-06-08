@@ -1,0 +1,14 @@
+conda install numpy
+#Numpy version 1.20.2
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c nvidia
+#Pytorch version 1.8.1, torchvision 0.9.1, cudatoolkit 11.1.74
+conda install -c conda-forge scikit-learn
+#    scikit-learn-0.23.2        |   py37hddcf8d6_3         6.8 MB  conda-forge
+#    scipy-1.5.3                |   py37h8911b10_0        18.5 MB  conda-forge
+pip install pyyaml
+conda install -c conda-forge fvcore
+pip install iopath
+pip install simplejson
+pip install opencv-python
+
+

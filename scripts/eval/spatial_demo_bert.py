@@ -12,7 +12,7 @@ import numpy as np
 import time
 import argparse
 
-from ptflops import get_model_complexity_info
+#from ptflops import get_model_complexity_info
 
 import torch
 import torch.nn.parallel
@@ -24,10 +24,12 @@ from sklearn.metrics import confusion_matrix
 datasetFolder="../../datasets"
 sys.path.insert(0, "../../")
 import models
+
 from VideoSpatialPrediction3D_bert import VideoSpatialPrediction3D_bert
+from VideoSpatialPrediction3D import VideoSpatialPrediction3D
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 model_names = sorted(name for name in models.__dict__
     if not name.startswith("__")
@@ -43,26 +45,29 @@ parser.add_argument('--dataset', '-d', default='hmdb51',
 parser.add_argument('--arch', '-a', metavar='ARCH', default='rgb_resneXt3D64f101_bert10_FRMB',
                     choices=model_names)
 
-parser.add_argument('-s', '--split', default=1, type=int, metavar='S',
+parser.add_argument('-s', '--split', default=2, type=int, metavar='S',
                     help='which split of data to work on (default: 1)')
 
 parser.add_argument('-w', '--window', default=3, type=int, metavar='V',
                     help='validation file index (default: 3)')
 
-
 parser.add_argument('-v', '--val', dest='window_val', action='store_true',
                     help='Window Validation Selection')
 
+parser.add_argument('-t', '--test', dest='test', action='store_true',
+                    help='TEST trial')
+
 multiGPUTest = False
 multiGPUTrain = False
-ten_crop_enabled = True
-num_seg=16
-num_seg_3D=1
+ten_crop_enabled = False
+multiple_clips = True
+
+num_seg_3D = 1
 
 result_dict = {}
 
 def buildModel(model_path,num_categories):
-    model=models.__dict__[args.arch](modelPath='', num_classes=num_categories,length=num_seg_3D)
+    model=models.__dict__[args.arch](modelPath='', num_classes=num_categories, length=None)
     params = torch.load(model_path)
 
     if multiGPUTest:
@@ -95,19 +100,22 @@ def main():
         length=16
         
 
-    modelLocation="./checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
+    modelLocation = "checkpoint/"+args.dataset+"_"+args.arch+"_split"+str(args.split)
 
-    model_path = os.path.join('../../',modelLocation,'model_best.pth.tar') 
+    model_path = os.path.join('../../', modelLocation, 'model_best.pth.tar')
     
     if args.dataset=='ucf101':
         frameFolderName = "ucf101_frames"
-    elif args.dataset=='hmdb51':
-        frameFolderName = "hmdb51_frames"
-    elif args.dataset=='smtV2':
+    elif args.dataset == 'hmdb51':
+        if args.test:
+            frameFolderName = "hmdb51_test_frames"
+        else:
+            frameFolderName = "hmdb51_frames"
+    elif args.dataset == 'smtV2':
         frameFolderName = "smtV2_frames"
-    elif args.dataset=='window':
+    elif args.dataset == 'window':
         frameFolderName = "window_frames"
-    data_dir=os.path.join(datasetFolder,frameFolderName)
+    data_dir = os.path.join(datasetFolder, frameFolderName)
     
 
     if 'rgb' in args.arch:
@@ -123,21 +131,24 @@ def main():
         elif 'hmdb51' in args.dataset:
             extension = 'flow_{0}_{1:05d}'
 
-    val_file=os.path.join(datasetFolder,'settings',args.dataset,val_fileName)
+    if args.test:
+        val_file=os.path.join(datasetFolder, 'settings', args.dataset + "_test", val_fileName)
+    else:
+        val_file = os.path.join(datasetFolder, 'settings', args.dataset, val_fileName)
     
     start_frame = 0
-    if args.dataset=='ucf101':
+    if args.dataset == 'ucf101':
         num_categories = 101
-    elif args.dataset=='hmdb51':
+    elif args.dataset == 'hmdb51':
         num_categories = 51
-    elif args.dataset=='smtV2':
+    elif args.dataset == 'smtV2':
         num_categories = 174
-    elif args.dataset=='window':
+    elif args.dataset == 'window':
         num_categories = 3
         
 
     model_start_time = time.time()
-    spatial_net=buildModel(model_path,num_categories)
+    spatial_net = buildModel(model_path, num_categories)
     model_end_time = time.time()
     model_time = model_end_time - model_start_time
     print("Action recognition model is loaded in %4.4f seconds." % (model_time))
@@ -168,18 +179,29 @@ def main():
         
         start = time.time()
         
-
-        spatial_prediction = VideoSpatialPrediction3D_bert(
-            clip_path,
-            spatial_net,
-            num_categories,
-            args.arch,
-            start_frame,
-            duration,
-            num_seg=num_seg_3D ,
-            length = length, 
-            extension = extension,
-            ten_crop = ten_crop_enabled)
+        if not multiple_clips:
+            spatial_prediction = VideoSpatialPrediction3D_bert(
+                clip_path,
+                spatial_net,
+                num_categories,
+                args.arch,
+                start_frame,
+                duration,
+                num_seg=num_seg_3D ,
+                length = length,
+                extension = extension,
+                ten_crop = ten_crop_enabled)
+        else:
+            spatial_prediction = VideoSpatialPrediction3D(
+                clip_path,
+                spatial_net,
+                num_categories,
+                args.arch,
+                start_frame,
+                duration,
+                length=length,
+                extension=extension,
+                ten_crop=ten_crop_enabled)
         
             
         end = time.time()
@@ -213,6 +235,11 @@ def main():
         print('10 crops')
     else:
         print('single crop')
+
+    if multiple_clips:
+        print('multiple clips')
+    else:
+        print('one clips')
         
     if args.window_val:
         print("window%d.txt" %(args.window))
