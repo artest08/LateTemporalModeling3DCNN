@@ -30,7 +30,7 @@ and for ucf101 as
 
 Name patterns of the dataset can be modified but the test of the datasets should also be modified. These are also specified in the variable called extension in the test files.
 
-##Training of the dataset
+## Training of the dataset
 There are two seperate training files called two_stream2.py and two_stream_bert2.py. These are almost identical two training files. Select the first for SGD training and select the second for ADAMW trainings. 
 
 #### Models
