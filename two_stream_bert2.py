@@ -28,7 +28,6 @@ from torch.optim import lr_scheduler
 import video_transforms
 import models
 import datasets
-import swats
 from opt.AdamW import AdamW
 from utils.model_path import rgb_3d_model_path_selection
 
