@@ -71,9 +71,9 @@ For the models listed below, use two_stream_bert2.py
 
 #### Training Commands
 
-python two_stream_bert2.py --split=1 --arch=rgb_resneXt3D64f101_bert10_FRMB --workers=2 --batch-size=8 --iter-size=16 --print-freq=400 --dataset=hmdb51 --lr=1e-5
+`python two_stream_bert2.py --split=1 --arch=rgb_resneXt3D64f101_bert10_FRMB --workers=2 --batch-size=8 --iter-size=16 --print-freq=400 --dataset=hmdb51 --lr=1e-5`
 
-python two_stream2.py --split=1 --arch=rgb_resneXt3D64f101 --workers=2 --batch-size=8 --iter-size=16 --print-freq=400 --dataset=hmdb51 --lr=1e-2
+`python two_stream2.py --split=1 --arch=rgb_resneXt3D64f101 --workers=2 --batch-size=8 --iter-size=16 --print-freq=400 --dataset=hmdb51 --lr=1e-2`
 
 
 For multi-gpu training, comment the two lines below
